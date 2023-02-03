@@ -122,6 +122,5 @@ if(old_data != notes):
 else:
     print("No changes")
 
-'''
 with open("data.json", "w") as f:
-        json.dump(notes, f)'''
+        json.dump(notes, f)
