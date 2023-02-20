@@ -1,6 +1,6 @@
-FROM python
+FROM python:3.9-alpine
 
-RUN apt-get update && apt-get -y install cron
+WORKDIR /app
 
 ENV HESSO_USERNAME=your_username \
     HESSO_PASSWORD=your_password \
@@ -8,9 +8,9 @@ ENV HESSO_USERNAME=your_username \
     TELEGRAM_CHAT_ID=telegram_chat_id
 
 COPY . /app
-
-WORKDIR /app
+COPY crontab /var/spool/cron/crontabs/
 
 RUN cd /app && pip3 install -r requirements.txt
 
-ENTRYPOINT [ "cron", "-f", "-c", "/app/crontab" ]
+# Executing crontab command
+CMD ["crond", "-f"]
