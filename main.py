@@ -100,12 +100,21 @@ if(old_data != notes):
     print("Changes detected")
 
     for branch in notes:
-        if(old_data[branch] != notes[branch]):
+        # If the branch doesn't exist in the old data or if the branch is different
+        if (branch not in old_data) or old_data[branch] != notes[branch]:
             message = "[GAPS] Modification in branch: " + branch
             for subbranch in notes[branch]:
                 # If the subbranch is the name or the average => skip
                 if subbranch == "name" or subbranch == "average":
                     continue
+
+                if branch not in old_data:
+                    message += "\nNew branch: " + branch
+                    break
+
+                if subbranch not in old_data[branch]:
+                    message += "\nNew subbranch: " + subbranch
+                    break
 
                 # If the subbranch is different
                 if(old_data[branch][subbranch] != notes[branch][subbranch]):
