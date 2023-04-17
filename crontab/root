@@ -1,2 +1,2 @@
 # min hour day month weekday command
-*/10 * * * * cd /app && python3 /app/main.py >> /var/log/cron.log 2>&1
+*/10 * * * * cd /app && python3 /app/main.py > /dev/stdout

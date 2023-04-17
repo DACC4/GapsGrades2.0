@@ -41,6 +41,9 @@ currentSubIndex = "";
 def decode_unicode_escapes(text):
     return codecs.escape_decode(bytes(text, "utf-8").decode("unicode_escape"))[0].decode("utf-8").split('\n', 1)[0]
 
+def note_message(note):
+    return "\n" + note["description"] + " : [" + note["note"] + "] (average " + note["average"] + ")"
+
 #For each cell in the table
 for row in parsed_html.body.find("table").find_all("tr"):
     # New branch
@@ -82,7 +85,7 @@ for row in parsed_html.body.find("table").find_all("tr"):
 
         notes[currentIndex][currentSubIndex]["notes"].append({
             "date": decode_unicode_escapes(cells[0].text),
-            "description": decode_unicode_escapes(cells[1].text),
+            "description": currentIndex + " > " + currentSubIndex + " > " + decode_unicode_escapes(cells[1].text),
             "average": decode_unicode_escapes(cells[2].text),
             "coeff": decode_unicode_escapes(cells[3].text),
             "note": decode_unicode_escapes(cells[4].text)
@@ -98,11 +101,11 @@ else:
 
 if(old_data != notes):
     print("Changes detected")
+    message = "[GAPS] Modification detected !"
 
     for branch in notes:
         # If the branch doesn't exist in the old data or if the branch is different
         if (branch not in old_data) or old_data[branch] != notes[branch]:
-            message = "[GAPS] Modification in branch: " + branch
             for subbranch in notes[branch]:
                 # If the subbranch is the name or the average => skip
                 if subbranch == "name" or subbranch == "average":
@@ -114,6 +117,9 @@ if(old_data != notes):
 
                 if subbranch not in old_data[branch]:
                     message += "\nNew subbranch: " + subbranch
+                    # Add all the notes of the subbranch
+                    for note in notes[branch][subbranch]["notes"]:
+                        message += note_message(note)
                     break
 
                 # If the subbranch is different
@@ -121,13 +127,11 @@ if(old_data != notes):
                     # Try to find the note that changed
                     for note in notes[branch][subbranch]["notes"]:
                         if note not in old_data[branch][subbranch]["notes"]:
-                            message += "\nNew note: " + note["note"] + " for " + note["description"]
-                            break
+                            message += note_message(note)
 
-            print(message)
-            bot = telegram.Bot(token=api_key)
-            asyncio.run(bot.send_message(chat_id=chat_id, text=message))
-            continue
+    print(message)
+    bot = telegram.Bot(token=api_key)
+    asyncio.run(bot.send_message(chat_id=chat_id, text=message))
 else:
     print("No changes")
 
