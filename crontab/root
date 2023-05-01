@@ -1,2 +1,2 @@
 # min hour day month weekday command
-*/10 * * * * cd /app && python3 /app/main.py > /dev/stdout
+*/5 * * * * cd /app && python3 /app/main.py > /dev/stdout
