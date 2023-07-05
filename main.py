@@ -102,7 +102,7 @@ def compare_notes(notes):
 
     if(old_data != notes):
         print("Changes detected")
-        message = "[GAPS] Modification detected !"
+        message = "[GAPS - Grades] Modification detected !"
 
         for branch in notes:
             # If the branch doesn't exist in the old data or if the branch is different
@@ -147,6 +147,124 @@ def save_notes(notes):
 -----------------------------------------------------------------------------------------------
 '''
 
+def parse_bulletin(bulletin_html):
+    # Parse HTML using 
+    parsed_html = BeautifulSoup(bulletin_html, "lxml")
+
+    bulletin = {}
+    currentIndex = ""
+
+     #For each cell in the table
+    for row in parsed_html.body.find("table", {"id": "record_table"}).find_all("tr"):
+        # Header, skip
+        if "bulletin_header_row" in row.attrs['class']:
+            continue
+
+        # End line, skip
+        if "total-credits-row" in row.attrs['class']:
+            continue
+
+        # Module
+        if "bulletin_module_row" in row.attrs['class']:
+            cells = [a.text for a in row.find_all("td")]
+
+            title = cells[0]
+            name = cells[1]
+            passed = cells[2]
+            grade = cells[4]
+
+            currentIndex = title
+            bulletin[currentIndex] = {}
+            bulletin[currentIndex]["title"] = title
+            bulletin[currentIndex]["name"] = name
+            bulletin[currentIndex]["passed"] = passed
+            bulletin[currentIndex]["grade"] = grade
+            bulletin[currentIndex]["units"] = {}
+            continue
+
+        # Unit
+        if "bulletin_unit_row" in row.attrs['class']:
+            cells = [a.text for a in row.find_all("td")]
+
+            name = re.match("(.*)<br>", cells[1])
+            subbranches = re.findall("([A-Z][a-z]*) \((\d*%)\) : (\d\.?\d?)", cells[1])
+            
+            title = cells[0]
+            name = name
+            grades = {}
+            grade = cells[4]
+
+            for a in subbranches:
+                name = a[0]
+                percentage = a[1]
+                g = a[2]
+
+                i = "{} ({})".format(name, percentage)
+
+                grades[i] = g
+
+
+            if len(subbranches) != 0:
+                bulletin[currentIndex]["units"][title] = {
+                    'title': title,
+                    'name': name,
+                    'grade': grade,
+                    'grades': grades
+                }
+
+            continue
+        
+    
+    return bulletin
+
+def compare_bulletin(bulletin):
+    if(os.path.isfile("bulletin.json")):
+        with open("bulletin.json", "r") as f:
+            old_data = json.load(f)
+    else:
+        print("No data file")
+        old_data = bulletin
+
+    if(old_data != bulletin):
+        print("Changes detected")
+        message = "[GAPS - Bulletin] Modification detected !"
+
+        for module in bulletin:
+            if (module in old_data) and bulletin[module] == old_data[module]:
+                continue
+
+            message += module_message(bulletin[module])
+            for a in bulletin[module]['units']:
+                message += unit_message(bulletin[module]['units'][a])
+    
+        return message
+    else:
+        return ""
+
+def module_message(module):
+    return "\n💠 {} : {} ({})".format(module['title'], module['passed'], module['grade'])
+
+def unit_message(unit):
+    tr = "\n   ♦️ {} : {} (".format(unit['title'], unit['grade'])
+    i = 0
+    for a in unit['grades']:
+        tr += "{} {}".format(a, unit['grades'][a])
+        i += 1
+        if i < len(unit['grades']):
+            tr += " | "
+    tr += ")"
+    return tr
+
+def save_bulletin(bulletin):
+    with open("bulletin.json", "w") as f:
+        json.dump(bulletin, f)
+
+'''
+-----------------------------------------------------------------------------------------------
+'''
+
+cookies = get_gaps_cookies()
+
 # Grades
 grades_html = requests.post("https://gaps.heig-vd.ch/consultation/controlescontinus/consultation.php?idst=17845", 
                        cookies=cookies,
@@ -158,10 +276,33 @@ grades = parse_grades(grades_html)
 message = compare_notes(grades)
 
 # Send message if new grades
-if message == ""
+if message == "":
     print("No changes")
 else:
     send_message(message)
 
 # Save new grades
-save_notes(notes)
+save_notes(grades)
+
+'''
+-----------------------------------------------------------------------------------------------
+'''
+
+# Bulletin
+bulletin_html = requests.post("https://gaps.heig-vd.ch/consultation/notes/bulletin.php?id=17845", 
+                       cookies=cookies,
+                       ).text
+
+# Parse and compare to stored data
+bulletin = parse_bulletin(bulletin_html)
+
+message = compare_bulletin(bulletin)
+
+# Send message if new bulletin
+if message == "":
+    print("No changes")
+else:
+    send_message(message)
+
+# Save new bulletin
+save_bulletin(bulletin)
