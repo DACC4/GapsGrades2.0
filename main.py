@@ -114,6 +114,12 @@ def compare_notes(notes):
 
                     if branch not in old_data:
                         message += "\nNew branch: " + branch
+                        # Add all the notes of the branch
+                        for sub in notes[branch]:
+                            if sub == "name" or sub == "average":
+                                continue
+                            for note in notes[branch][sub]["notes"]:
+                                message += note_message(note)
                         break
 
                     if subbranch not in old_data[branch]:
